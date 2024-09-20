@@ -1,0 +1,77 @@
+-- Clutch performance analysis
+
+SELECT 
+  Team,
+  win_loss_record_3_points,
+  CAST(SPLIT(win_loss_record_3_points, '-')[SAFE_OFFSET(0)] AS INT64) AS wins,
+  CAST(SPLIT(win_loss_record_3_points, '-')[SAFE_OFFSET(1)] AS INT64) AS losses,
+  ROUND(CAST(SPLIT(win_loss_record_3_points, '-')[SAFE_OFFSET(0)] AS FLOAT64) /
+  (CAST(SPLIT(win_loss_record_3_points, '-')[SAFE_OFFSET(0)] AS FLOAT64) + 
+   CAST(SPLIT(win_loss_record_3_points, '-')[SAFE_OFFSET(1)] AS FLOAT64)),2) AS win_percentage
+FROM `Results.Expanded`
+ORDER BY win_percentage DESC;
+
+--Blowout Analysis: Games Decided by 10 Points or More
+
+WITH blowout_analysis AS (
+    SELECT
+        `Team` AS team_name,
+        
+        -- Extract the blowout wins and losses using the 'Win-loss record decided by 10 points or more' field
+        CAST(SPLIT(`win_loss_record_10_points`, '-')[OFFSET(0)] AS INT64) AS blowout_wins,
+        CAST(SPLIT(`win_loss_record_10_points`, '-')[OFFSET(1)] AS INT64) AS blowout_losses,
+        
+        -- Calculate total number of blowout games
+        CAST(SPLIT(`win_loss_record_10_points`, '-')[OFFSET(0)] AS INT64) +
+        CAST(SPLIT(`win_loss_record_10_points`, '-')[OFFSET(1)] AS INT64) AS total_blowout_games
+        
+    FROM `Results.Expanded`
+)
+
+-- Calculate blowout win percentage and return results
+SELECT
+    team_name,
+    blowout_wins,
+    blowout_losses,
+    total_blowout_games,
+    
+    -- Calculate blowout win percentage
+    ROUND(SAFE_DIVIDE(blowout_wins, total_blowout_games),2) AS blowout_win_percentage
+    
+FROM blowout_analysis
+ORDER BY blowout_win_percentage DESC;
+
+--
+Home vs. Road Performance Analysis
+
+SELECT 
+    team,
+    
+    -- Calculate Home Wins and Losses
+    CAST(SPLIT(Home, '-')[SAFE_OFFSET(0)] AS INT64) AS home_wins,
+    CAST(SPLIT(Home, '-')[SAFE_OFFSET(1)] AS INT64) AS home_losses,
+    
+    -- Calculate Road Wins and Losses
+    CAST(SPLIT(Road, '-')[SAFE_OFFSET(0)] AS INT64) AS road_wins,
+    CAST(SPLIT(Road, '-')[SAFE_OFFSET(1)] AS INT64) AS road_losses,
+    
+    -- Calculate Home Win Percentage
+    ROUND(CAST(SPLIT(Home, '-')[SAFE_OFFSET(0)] AS FLOAT64) /
+    (CAST(SPLIT(Home, '-')[SAFE_OFFSET(0)] AS FLOAT64) + 
+     CAST(SPLIT(Home, '-')[SAFE_OFFSET(1)] AS FLOAT64)),2) AS home_win_percentage,
+
+    -- Calculate Road Win Percentage
+    ROUND(CAST(SPLIT(Road, '-')[SAFE_OFFSET(0)] AS FLOAT64) /
+    (CAST(SPLIT(Road, '-')[SAFE_OFFSET(0)] AS FLOAT64) + 
+     CAST(SPLIT(Road, '-')[SAFE_OFFSET(1)] AS FLOAT64)),2) AS road_win_percentage,
+
+    -- Difference between Home and Road Performance
+    ROUND(CAST(SPLIT(Home, '-')[SAFE_OFFSET(0)] AS FLOAT64) /
+    (CAST(SPLIT(Home, '-')[SAFE_OFFSET(0)] AS FLOAT64) + 
+     CAST(SPLIT(Home, '-')[SAFE_OFFSET(1)] AS FLOAT64)) - 
+    CAST(SPLIT(Road, '-')[SAFE_OFFSET(0)] AS FLOAT64) /
+    (CAST(SPLIT(Road, '-')[SAFE_OFFSET(0)] AS FLOAT64) + 
+     CAST(SPLIT(Road, '-')[SAFE_OFFSET(1)] AS FLOAT64)),2) AS win_percentage_difference
+    
+FROM `Results.Expanded`
+ORDER BY win_percentage_difference DESC;
